@@ -11,6 +11,8 @@ import {
 import { setCategory, setSortBy } from "../redux/actions/filters";
 import { fetchPizzas } from "../redux/actions/pizzas";
 import { addPizzaToCart } from "../redux/actions/cart";
+import { useQuery, useQueryClient } from "react-query";
+import axios from "axios";
 
 const categoryNames = [
     "Мясные",
@@ -27,10 +29,20 @@ const sortIems = [
 
 function Home() {
     const dispatch = useDispatch();
-    const items = useSelector(({ pizzas }) => pizzas.items);
     const cartItems = useSelector(({ cart }) => cart.items);
-    const isLoaded = useSelector(({ pizzas }) => pizzas.isLoaded);
     const { category, sortBy } = useSelector(({ filters }) => filters);
+
+    const queryCLient = useQueryClient();
+    const { data: items, isLoading } = useQuery(
+        ["pizzas", sortBy, category],
+        () => {
+            return axios.get(
+                `${process.env.REACT_APP_SERVER}/pizzas?${
+                    category !== null ? `category=${category}` : ""
+                }&_sort=${sortBy.type}&_order=${sortBy.order}`
+            );
+        }
+    );
 
     React.useEffect(() => {
         dispatch(fetchPizzas(sortBy, category));
@@ -57,6 +69,8 @@ function Home() {
         });
     };
 
+    console.log(items);
+
     return (
         <div className="container">
             <div className="content__top">
@@ -73,8 +87,8 @@ function Home() {
             </div>
             <h2 className="content__title">Все пиццы</h2>
             <div className="content__items">
-                {isLoaded
-                    ? items.map((obj) => (
+                {!isLoading
+                    ? items.data.map((obj) => (
                           <PizzaBlock
                               onClickAddPizza={handleAddPizzaToCart}
                               key={obj.id}
